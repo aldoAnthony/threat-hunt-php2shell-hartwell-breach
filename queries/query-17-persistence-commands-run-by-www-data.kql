@@ -1,0 +1,11 @@
+// Query 17: Persistence commands run by www-data
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-17-persistence-commands-run-by-www-data.png
+
+HartwellSysmon_CL
+| where OriginalTime between (datetime(2026-10-23T04:00:00Z) .. datetime(2026-10-23T16:00:00Z))
+| where RuleName == "ProcessCreate" and User == "www-data"
+| where CommandLine contains "cron" or CommandLine contains "systemctl enable" or CommandLine contains "authorized_keys" or CommandLine contains ".bashrc" or CommandLine contains ".profile"
+    or CommandLine contains "at now" or CommandLine contains "systemd/system" or CommandLine contains "rc.local" or CommandLine contains "nohup"
+| summarize RawRows = count(), FirstSeen = min(OriginalTime), LastSeen = max(OriginalTime) by CommandLine, Image, ParentImage
+| sort by FirstSeen asc

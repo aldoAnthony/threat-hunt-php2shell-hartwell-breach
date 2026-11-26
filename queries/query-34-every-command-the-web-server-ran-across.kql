@@ -1,0 +1,16 @@
+// Query 34: Every command the web server ran across the window, outside the first run and the implant's cron runs
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-34-every-command-the-web-server-ran-across.png
+
+HartwellAudit_CL
+| where OriginalTime between (datetime(2026-10-23T04:00:00Z) .. datetime(2026-10-23T16:00:00Z))
+| where AuditType == "EXECVE"
+| where not(OriginalTime between (datetime(2026-10-23T04:34:00Z) .. datetime(2026-10-23T04:38:00Z)))
+| where RawLine !has "/dev/shm/.cache-helper"
+| join kind=inner (HartwellAudit_CL
+    | where OriginalTime between (datetime(2026-10-23T04:00:00Z) .. datetime(2026-10-23T16:00:00Z))
+    | where AuditType == "SYSCALL" and RawLine has 'key="php_worker_exec"'
+    | extend Serial = extract(@"msg=audit\([0-9.]+:(\d+)\)", 1, RawLine)
+    | project Serial) on $left.AuditSerial == $right.Serial
+| summarize Count = count(), FirstSeen = min(OriginalTime), LastSeen = max(OriginalTime) by Args = extract(@'argc=\d+ (.*)$', 1, RawLine)
+| sort by FirstSeen asc

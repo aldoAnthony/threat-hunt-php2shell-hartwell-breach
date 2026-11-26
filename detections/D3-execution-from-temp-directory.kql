@@ -1,0 +1,12 @@
+// D3: A program running from a temporary directory
+// Data source: HartwellAudit_CL. Validated by Query 31.
+// Result: /dev/shm/.cache-helper from 04:36:22, and /tmp/.update at 04:34:50 UTC. Nothing else.
+// Uses auditd, so it covers the period before Sysmon started.
+// False positives: none in this data. Some installers run from /tmp, so allow-list them by exact path.
+// The rule doesn't cover other writable locations.
+
+HartwellAudit_CL
+| where AuditType == "SYSCALL" and RawLine has "syscall=59"
+| extend Exe = extract(@'exe="([^"]+)"', 1, RawLine)
+| where Exe startswith "/dev/shm/" or Exe startswith "/tmp/" or Exe startswith "/var/tmp/"
+| project OriginalTime, Exe, RawLine

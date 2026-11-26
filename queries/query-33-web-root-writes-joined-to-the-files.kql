@@ -1,0 +1,15 @@
+// Query 33: Web-root writes, joined to the files they touched and the account that made them
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-33-web-root-writes-joined-to-the-files.png
+
+HartwellAudit_CL
+| where OriginalTime between (datetime(2026-10-23T04:34:00Z) .. datetime(2026-10-23T04:40:00Z))
+| where AuditType in ("SYSCALL", "PATH")
+| extend Serial = extract(@"msg=audit\([0-9.]+:(\d+)\)", 1, RawLine)
+| summarize Time = min(OriginalTime), Exe = take_anyif(extract(@'exe="([^"]+)"', 1, RawLine), AuditType == "SYSCALL"),
+    Account = take_anyif(extract(@'UID="([^"]+)"', 1, RawLine), AuditType == "SYSCALL"),
+    Key = take_anyif(extract(@'key="([^"]+)"', 1, RawLine), AuditType == "SYSCALL"),
+    Paths = make_set_if(extract(@' name="([^"]+)"', 1, RawLine), AuditType == "PATH", 10)
+    by Serial
+| where Key == "webroot_write"
+| sort by Time asc

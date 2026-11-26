@@ -1,0 +1,27 @@
+// Query 20: Lateral-movement tools, internal addresses, network events and SSH logins
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-20-lateral-movement-tools-internal-addresses-network-events.png
+
+let Start = datetime(2026-10-23T04:00:00Z);
+let End = datetime(2026-10-23T16:00:00Z);
+let Tools = dynamic(["ssh", "scp", "sftp", "rsync", "nc", "ncat", "netcat", "socat", "telnet", "psql", "smbclient", "sshpass", "ansible"]);
+union
+(HartwellHTTPEnriched_CL
+ | where OriginalTime between (Start .. End)
+ | where x_hmg_debug_decoded has_any (Tools) or x_hmg_debug_decoded matches regex @"192\.168\.1\.\d+" or x_hmg_debug_decoded contains "/dev/tcp"
+ | project OriginalTime, SourceTable = "HTTPEnriched", Who = id_orig_h, Detail = x_hmg_debug_decoded),
+(HartwellSysmon_CL
+ | where OriginalTime between (Start .. End)
+ | where RuleName == "ProcessCreate" and User == "www-data"
+ | where CommandLine has_any (Tools) or CommandLine matches regex @"192\.168\.1\.\d+" or CommandLine contains "/dev/tcp" or CommandLine contains "mysql -h"
+ | project OriginalTime, SourceTable = "SysmonProcess", Who = User, Detail = CommandLine),
+(HartwellSysmon_CL
+ | where OriginalTime between (Start .. End)
+ | where RuleName == "NetworkConnect"
+ | project OriginalTime, SourceTable = "SysmonNetwork", Who = User, Detail = strcat(Image, " | ", tostring(CommandLine))),
+(HartwellAuth_CL
+ | where OriginalTime between (Start .. End)
+ | where Message has_any ("Accepted", "Failed password", "Invalid user")
+ | project OriginalTime, SourceTable = "Auth", Who = Process, Detail = replace_regex(Message, @"port [0-9]+", "port N"))
+| summarize RawRows = count(), FirstSeen = min(OriginalTime), LastSeen = max(OriginalTime) by SourceTable, Who, Detail
+| sort by SourceTable asc, FirstSeen asc

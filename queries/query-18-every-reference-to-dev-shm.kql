@@ -1,0 +1,18 @@
+// Query 18: Every reference to /dev/shm
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-18-every-reference-to-dev-shm.png
+
+union
+(HartwellSysmon_CL
+ | where OriginalTime between (datetime(2026-10-23T04:00:00Z) .. datetime(2026-10-23T16:00:00Z))
+ | where CommandLine contains "/dev/shm" or Image startswith "/dev/shm"
+ | summarize RawRows = count(), FirstSeen = min(OriginalTime), LastSeen = max(OriginalTime) by SourceTable = "Sysmon", Who = User, Action = RuleName, Detail = strcat(Image, " | ", CommandLine)),
+(HartwellHTTPEnriched_CL
+ | where OriginalTime between (datetime(2026-10-23T04:00:00Z) .. datetime(2026-10-23T16:00:00Z))
+ | where x_hmg_debug_decoded contains "/dev/shm"
+ | summarize RawRows = count(), FirstSeen = min(OriginalTime), LastSeen = max(OriginalTime) by SourceTable = "HTTPEnriched", Who = id_orig_h, Action = method, Detail = x_hmg_debug_decoded),
+(HartwellAudit_CL
+ | where OriginalTime between (datetime(2026-10-23T04:00:00Z) .. datetime(2026-10-23T16:00:00Z))
+ | where RawLine contains "/dev/shm"
+ | summarize RawRows = count(), FirstSeen = min(OriginalTime), LastSeen = max(OriginalTime), Detail = take_any(RawLine) by SourceTable = "Audit", Who = "-", Action = AuditType)
+| sort by FirstSeen asc

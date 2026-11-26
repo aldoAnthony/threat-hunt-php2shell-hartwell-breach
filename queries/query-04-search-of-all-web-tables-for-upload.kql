@@ -1,0 +1,18 @@
+// Query 4: Search of all web tables for upload_progress
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-04-search-of-all-web-tables-for-upload.png
+
+union
+(HartwellApacheError_CL
+ | where OriginalTime between (datetime(2026-10-23T04:00:00Z) .. datetime(2026-10-23T16:00:00Z))
+ | where RawLine contains "upload_progress"
+ | project OriginalTime, SourceTable = "ApacheError", Source = ClientIP, Detail = RawLine),
+(HartwellApache_CL
+ | where OriginalTime between (datetime(2026-10-23T04:00:00Z) .. datetime(2026-10-23T16:00:00Z))
+ | where RawLine contains "upload_progress"
+ | project OriginalTime, SourceTable = "Apache", Source = SourceIP, Detail = RawLine),
+(HartwellHTTPEnriched_CL
+ | where OriginalTime between (datetime(2026-10-23T04:00:00Z) .. datetime(2026-10-23T16:00:00Z))
+ | where request_headers contains "upload_progress" or uri contains "upload_progress" or x_hmg_debug_decoded contains "upload_progress"
+ | project OriginalTime, SourceTable = "HTTPEnriched", Source = id_orig_h, Detail = strcat(method, " ", uri, " | ", content_type, " | ", request_headers))
+| sort by OriginalTime asc

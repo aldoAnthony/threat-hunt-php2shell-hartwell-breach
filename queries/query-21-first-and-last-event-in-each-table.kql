@@ -1,0 +1,10 @@
+// Query 21: First and last event in each table
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-21-first-and-last-event-in-each-table.png
+
+union withsource = SourceTable HartwellApache_CL, HartwellApacheError_CL, HartwellHTTPEnriched_CL, HartwellSysmon_CL, HartwellAudit_CL, HartwellSyslog_CL, HartwellAuth_CL
+| where OriginalTime between (datetime(2026-10-22T00:00:00Z) .. datetime(2026-10-25T00:00:00Z))
+| summarize FirstEvent = min(OriginalTime), LastEvent = max(OriginalTime),
+    RowsInWindow = countif(OriginalTime between (datetime(2026-10-23T04:00:00Z) .. datetime(2026-10-23T16:00:00Z)))
+    by SourceTable
+| sort by SourceTable asc

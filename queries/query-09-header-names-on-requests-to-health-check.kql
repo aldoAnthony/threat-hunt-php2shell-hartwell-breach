@@ -1,0 +1,13 @@
+// Query 9: Header names on requests to health-check.php
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-09-header-names-on-requests-to-health-check.png
+
+HartwellHTTPEnriched_CL
+| where OriginalTime between (datetime(2026-10-23T04:00:00Z) .. datetime(2026-10-23T16:00:00Z))
+| where uri contains "health-check"
+| extend HeaderNames = bag_keys(todynamic(request_headers))
+| mv-expand HeaderName = HeaderNames to typeof(string)
+| summarize RawRows = count(), RowsWithDecoded = countif(isnotempty(x_hmg_debug_decoded)), FirstSeen = min(OriginalTime), LastSeen = max(OriginalTime),
+    SampleRaw = take_any(x_hmg_debug_raw), SampleDecoded = take_any(x_hmg_debug_decoded), SampleHeaders = take_any(request_headers)
+    by HeaderName
+| sort by RawRows asc

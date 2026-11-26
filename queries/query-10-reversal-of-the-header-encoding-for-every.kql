@@ -1,0 +1,11 @@
+// Query 10: Reversal of the header encoding for every value
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-10-reversal-of-the-header-encoding-for-every.png
+
+HartwellHTTPEnriched_CL
+| where OriginalTime between (datetime(2026-10-23T04:00:00Z) .. datetime(2026-10-23T16:00:00Z))
+| where isnotempty(x_hmg_debug_raw)
+| extend Base64Decoded = base64_decode_tostring(x_hmg_debug_raw)
+| extend ThenRot13 = translate("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", "NOPQRSTUVWXYZABCDEFGHIJKLMnopqrstuvwxyzabcdefghijklm", Base64Decoded)
+| summarize TotalRows = count(), DistinctRaw = dcount(x_hmg_debug_raw, 4), MatchesDecoded = countif(ThenRot13 == x_hmg_debug_decoded),
+    NoMatch = countif(ThenRot13 != x_hmg_debug_decoded), SampleBase64Decoded = take_any(Base64Decoded), SampleThenRot13 = take_any(ThenRot13), SampleDecoded = take_any(x_hmg_debug_decoded)

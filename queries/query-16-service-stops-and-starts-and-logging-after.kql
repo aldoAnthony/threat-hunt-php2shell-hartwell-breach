@@ -1,0 +1,28 @@
+// Query 16: Service stops and starts, and logging after the stop attempts
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-16-service-stops-and-starts-and-logging-after.png
+
+let Start = datetime(2026-10-23T04:00:00Z);
+let End = datetime(2026-10-23T16:00:00Z);
+let LastStop = datetime(2026-10-23T14:14:07Z);
+union
+(HartwellSyslog_CL
+ | where OriginalTime between (Start .. End)
+ | where Message has_any ("sysmon", "auditd", "SplunkForwarder", "polkit", "polkitd") or Process has_any ("polkitd", "auditd")
+ | project OriginalTime, SourceTable = "Syslog", Detail = replace_regex(Message, @"[0-9]+", "N")),
+(HartwellAuth_CL
+ | where OriginalTime between (Start .. End)
+ | where Message has_any ("polkit", "systemctl", "sysmon", "auditd", "SplunkForwarder") or Process has "polkit"
+ | project OriginalTime, SourceTable = "Auth", Detail = replace_regex(Message, @"[0-9]+", "N")),
+(HartwellAudit_CL
+ | where OriginalTime between (Start .. End)
+ | where AuditType in ("CONFIG_CHANGE", "SERVICE_STOP", "SERVICE_START", "DAEMON_END", "DAEMON_START")
+ | project OriginalTime, SourceTable = "Audit", Detail = strcat(AuditType, ": ", replace_regex(RawLine, @"[0-9]+", "N"))),
+(HartwellSysmon_CL
+ | where OriginalTime between (LastStop .. End)
+ | project OriginalTime, SourceTable = "SysmonAfterLastStop", Detail = "any event"),
+(HartwellAudit_CL
+ | where OriginalTime between (LastStop .. End)
+ | project OriginalTime, SourceTable = "AuditAfterLastStop", Detail = "any event")
+| summarize RawRows = count(), FirstSeen = min(OriginalTime), LastSeen = max(OriginalTime) by SourceTable, Detail
+| sort by FirstSeen asc

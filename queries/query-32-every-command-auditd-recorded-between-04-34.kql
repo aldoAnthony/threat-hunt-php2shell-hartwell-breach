@@ -1,0 +1,12 @@
+// Query 32: Every command auditd recorded between 04:34 and 05:25, before Sysmon was running
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-32-every-command-auditd-recorded-between-04-34.png
+
+HartwellAudit_CL
+| where OriginalTime between (datetime(2026-10-23T04:34:00Z) .. datetime(2026-10-23T05:25:00Z))
+| where AuditType in ("EXECVE", "SYSCALL")
+| extend Exe = extract(@'exe="([^"]+)"', 1, RawLine), Account = extract(@'UID="([^"]+)"', 1, RawLine), Key = extract(@'key="([^"]+)"', 1, RawLine)
+| extend Args = extract(@'argc=\d+ (.*)$', 1, RawLine)
+| extend Detail = iff(AuditType == "EXECVE", Args, strcat(Exe, " | uid=", Account, " | key=", Key))
+| summarize Count = count(), FirstSeen = min(OriginalTime), LastSeen = max(OriginalTime) by AuditType, Detail
+| sort by FirstSeen asc

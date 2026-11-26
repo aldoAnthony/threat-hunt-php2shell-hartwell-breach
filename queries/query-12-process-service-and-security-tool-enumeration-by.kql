@@ -1,0 +1,12 @@
+// Query 12: Process, service and security-tool enumeration by www-data
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-12-process-service-and-security-tool-enumeration-by.png
+
+HartwellSysmon_CL
+| where OriginalTime between (datetime(2026-10-23T04:00:00Z) .. datetime(2026-10-23T16:00:00Z))
+| where RuleName == "ProcessCreate" and User == "www-data"
+| where CommandLine has_any ("ps", "pgrep", "systemctl", "service", "dpkg", "apt", "which", "ls", "find", "lsmod", "auditctl")
+    or CommandLine contains "sysmon" or CommandLine contains "audit" or CommandLine contains "splunk"
+    or CommandLine contains "falco" or CommandLine contains "ossec" or CommandLine contains "wazuh" or CommandLine contains "crowdstrike" or CommandLine contains "falcon"
+| summarize RawRows = count(), FirstSeen = min(OriginalTime), LastSeen = max(OriginalTime) by CommandLine, Image, ParentImage
+| sort by FirstSeen asc

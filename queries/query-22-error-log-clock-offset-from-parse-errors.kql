@@ -1,0 +1,17 @@
+// Query 22: Error-log clock offset, from parse errors matched to Apache 500s
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-22-error-log-clock-offset-from-parse-errors.png
+
+let Err = HartwellApacheError_CL
+| where OriginalTime between (datetime(2026-10-23T00:00:00Z) .. datetime(2026-10-23T16:00:00Z))
+| where Message has "health-check.php" and Message has "Parse error"
+| distinct ErrTime = bin(OriginalTime, 1s);
+let Acc = HartwellApache_CL
+| where OriginalTime between (datetime(2026-10-23T04:00:00Z) .. datetime(2026-10-23T20:00:00Z))
+| where URI has "health-check" and StatusCode == "500"
+| distinct AccTime = bin(OriginalTime, 1s);
+Err | extend k = 1
+| join kind=inner (Acc | extend k = 1) on k
+| extend OffsetSeconds = datetime_diff('second', AccTime, ErrTime)
+| summarize Pairs = count(), ErrorTimes = make_set(ErrTime, 10) by OffsetSeconds
+| top 5 by Pairs desc

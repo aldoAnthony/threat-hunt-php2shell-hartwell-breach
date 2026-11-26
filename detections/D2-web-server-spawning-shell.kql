@@ -1,0 +1,11 @@
+// D2: The web server starting a shell as www-data
+// Data source: HartwellSysmon_CL. Validated by Query 30.
+// Result: every webshell command, from 12:21:07 to 14:19:10 UTC.
+// Not matched: root's mariadb-check and version checks under PHP, and root's logger, tee and apache-log-backup.sh under Apache.
+// False positives: if a WordPress plugin legitimately shells out, allow-list its exact command line, never the account.
+
+HartwellSysmon_CL
+| where RuleName == "ProcessCreate" and User == "www-data"
+| where ParentImage endswith "/apache2" or ParentImage has "php"
+| where Image endswith "/sh" or Image endswith "/dash" or Image endswith "/bash"
+| project OriginalTime, ParentImage, Image, CommandLine

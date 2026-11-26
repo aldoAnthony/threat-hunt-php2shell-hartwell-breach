@@ -1,0 +1,12 @@
+// Query 31: Validation of detection D3
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-31-validation-of-detection-d3.png
+
+HartwellAudit_CL
+| where OriginalTime between (datetime(2026-10-23T00:00:00Z) .. datetime(2026-10-24T00:00:00Z))
+| where AuditType == "SYSCALL" and RawLine has "syscall=59"
+| extend Exe = extract(@'exe="([^"]+)"', 1, RawLine), Account = extract(@'UID="([^"]+)"', 1, RawLine)
+| extend Matched = Exe startswith "/dev/shm/" or Exe startswith "/tmp/" or Exe startswith "/var/tmp/"
+| summarize Executions = count(), FirstSeen = min(OriginalTime), LastSeen = max(OriginalTime)
+    by Matched, Program = iff(Matched, Exe, "(all other paths)"), Account
+| sort by Matched desc, FirstSeen asc

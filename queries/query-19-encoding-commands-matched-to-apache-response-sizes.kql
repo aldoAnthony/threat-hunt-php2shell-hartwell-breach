@@ -1,0 +1,18 @@
+// Query 19: Encoding commands matched to Apache response sizes
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-19-encoding-commands-matched-to-apache-response-sizes.png
+
+let Start = datetime(2026-10-23T04:00:00Z);
+let End = datetime(2026-10-23T16:00:00Z);
+let ApacheResp = HartwellApache_CL
+| where OriginalTime between (Start .. End)
+| where URI contains "health-check" and SourceIP == "192.168.1.100"
+| summarize ApacheRows = count(), StatusCodes = make_set(StatusCode, 5), ResponseSizes = make_set(tolong(ResponseSize), 5) by Sec = bin(OriginalTime, 1s);
+HartwellHTTPEnriched_CL
+| where OriginalTime between (Start .. End)
+| where isnotempty(x_hmg_debug_decoded)
+| where x_hmg_debug_decoded has_any ("base64", "curl", "wget", "scp", "rsync", "nc", "ncat", "socat", "ftp", "sftp", "/dev/tcp", "tar", "zip")
+| extend Sec = bin(OriginalTime, 1s)
+| join kind=leftouter ApacheResp on Sec
+| project OriginalTime, id_orig_h, uri, x_hmg_debug_decoded, ApacheRows, StatusCodes, ResponseSizes
+| sort by OriginalTime asc

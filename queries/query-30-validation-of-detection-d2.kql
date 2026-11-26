@@ -1,0 +1,12 @@
+// Query 30: Validation of detection D2
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-30-validation-of-detection-d2.png
+
+HartwellSysmon_CL
+| where OriginalTime between (datetime(2026-10-23T00:00:00Z) .. datetime(2026-10-24T00:00:00Z))
+| where RuleName == "ProcessCreate"
+| where ParentImage endswith "/apache2" or ParentImage has "php"
+| extend Matched = User == "www-data" and (Image endswith "/sh" or Image endswith "/dash" or Image endswith "/bash")
+| summarize Processes = count(), FirstSeen = min(OriginalTime), LastSeen = max(OriginalTime), Samples = make_set(CommandLine, 5)
+    by Matched, User, ParentImage, Image
+| sort by Matched desc, FirstSeen asc

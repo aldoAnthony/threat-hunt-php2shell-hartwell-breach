@@ -1,0 +1,13 @@
+// Query 5: Method and content type per source
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-05-method-and-content-type-per-source.png
+
+HartwellHTTPEnriched_CL
+| where OriginalTime between (datetime(2026-10-23T04:00:00Z) .. datetime(2026-10-23T16:00:00Z))
+| extend ContentTypeBase = tolower(trim(@"\s", tostring(split(content_type, ";")[0])))
+| extend InExploitWindow = OriginalTime between (datetime(2026-10-23T08:18:05Z) .. datetime(2026-10-23T08:19:48Z))
+    or OriginalTime between (datetime(2026-10-23T09:53:35Z) .. datetime(2026-10-23T09:57:01Z))
+| summarize RawRows = count(), ExploitWindowRows = countif(InExploitWindow), DistinctURIs = dcount(uri), SampleURIs = make_set(uri, 5),
+    FirstSeen = min(OriginalTime), LastSeen = max(OriginalTime), MaxBodyLen = max(tolong(request_body_len))
+    by id_orig_h, method, ContentTypeBase
+| sort by ExploitWindowRows desc, RawRows desc

@@ -1,0 +1,10 @@
+// Query 1: Requests per source address, to identify the scanner
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-01-requests-per-source-address-to-identify-the.png
+
+HartwellApache_CL
+| where OriginalTime between (datetime(2026-10-23T04:00:00Z) .. datetime(2026-10-23T16:00:00Z))
+| summarize RawRows = count(), DistinctRequests = dcount(RawLine), DistinctURIs = dcount(URI), Status404 = countif(StatusCode == "404"),
+    FirstSeen = min(OriginalTime), LastSeen = max(OriginalTime), UserAgents = make_set(UserAgent, 5) by SourceIP
+| extend IsStaff = SourceIP in ("192.168.1.50", "192.168.1.80")
+| sort by DistinctRequests desc

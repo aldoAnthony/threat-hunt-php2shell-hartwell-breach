@@ -1,0 +1,9 @@
+// Query 25: Events per table, 12:20–13:50
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-25-events-per-table-12-20-13-50.png
+
+union withsource = T HartwellApache_CL, HartwellApacheError_CL, HartwellHTTPEnriched_CL, HartwellSysmon_CL, HartwellAudit_CL, HartwellSyslog_CL, HartwellAuth_CL
+| extend CorrectedTime = iff(T == "HartwellApacheError_CL", OriginalTime + 4h, OriginalTime)
+| where CorrectedTime between (datetime(2026-10-23T12:20:00Z) .. datetime(2026-10-23T13:50:00Z))
+| summarize Events = count(), First = min(CorrectedTime), Last = max(CorrectedTime) by T, Bin = bin(CorrectedTime, 10m)
+| sort by T asc, Bin asc

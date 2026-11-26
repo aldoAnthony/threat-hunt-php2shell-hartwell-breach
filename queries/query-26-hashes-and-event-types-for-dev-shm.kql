@@ -1,0 +1,9 @@
+// Query 26: Hashes and event types for /dev/shm/.cache-helper and /usr/bin/sleep
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-26-hashes-and-event-types-for-dev-shm.png
+
+HartwellSysmon_CL
+| where OriginalTime between (datetime(2026-10-23T04:00:00Z) .. datetime(2026-10-23T16:00:00Z))
+| where Image in ("/dev/shm/.cache-helper", "/usr/bin/sleep")
+| summarize Events = count(), FirstSeen = min(OriginalTime), LastSeen = max(OriginalTime) by Image, Hashes, RuleName, User
+| sort by FirstSeen asc

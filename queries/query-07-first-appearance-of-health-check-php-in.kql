@@ -1,0 +1,18 @@
+// Query 7: First appearance of health-check.php in each table
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-07-first-appearance-of-health-check-php-in.png
+
+union
+(HartwellApache_CL
+ | where OriginalTime between (datetime(2026-10-23T04:00:00Z) .. datetime(2026-10-23T16:00:00Z))
+ | where URI contains "health-check"
+ | summarize RawRows = count(), FirstSeen = min(OriginalTime), LastSeen = max(OriginalTime) by SourceTable = "Apache", Who = SourceIP, Action = Method, Detail = StatusCode),
+(HartwellHTTPEnriched_CL
+ | where OriginalTime between (datetime(2026-10-23T04:00:00Z) .. datetime(2026-10-23T16:00:00Z))
+ | where uri contains "health-check"
+ | summarize RawRows = count(), FirstSeen = min(OriginalTime), LastSeen = max(OriginalTime) by SourceTable = "HTTPEnriched", Who = id_orig_h, Action = method, Detail = "-"),
+(HartwellSysmon_CL
+ | where OriginalTime between (datetime(2026-10-23T04:00:00Z) .. datetime(2026-10-23T16:00:00Z))
+ | where CommandLine contains "health-check" or ParentCommandLine contains "health-check"
+ | summarize RawRows = count(), FirstSeen = min(OriginalTime), LastSeen = max(OriginalTime) by SourceTable = "Sysmon", Who = User, Action = RuleName, Detail = CommandLine)
+| sort by FirstSeen asc

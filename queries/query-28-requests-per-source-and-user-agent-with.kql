@@ -1,0 +1,11 @@
+// Query 28: Requests per source and user agent, with webshell and exploit contact
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-28-requests-per-source-and-user-agent-with.png
+
+HartwellApache_CL
+| where OriginalTime between (datetime(2026-10-23T04:00:00Z) .. datetime(2026-10-23T16:00:00Z))
+| summarize Requests = count(), DistinctURIs = dcount(URI, 4), Methods = make_set(Method, 6), Statuses = make_set(StatusCode, 8),
+    HealthCheckHits = countif(URI has "health-check"), PostsOutsideLogin = countif(Method == "POST" and URI !has "wp-login" and URI !has "wp-admin"),
+    FirstSeen = min(OriginalTime), LastSeen = max(OriginalTime)
+        by SourceIP, UserAgent    
+| sort by SourceIP asc, FirstSeen asc

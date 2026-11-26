@@ -1,0 +1,17 @@
+// Query 23: Error log on the corrected clock, beside non-login POSTs from 192.168.1.100
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-23-error-log-on-the-corrected-clock-beside.png
+
+union
+(HartwellApacheError_CL
+ | where OriginalTime between (datetime(2026-10-23T00:00:00Z) .. datetime(2026-10-23T12:00:00Z))
+ | extend CorrectedTime = OriginalTime + 4h
+ | where Message has "session" or Message has "health-check" or Message has "Parse error"
+ | project T = CorrectedTime, Source = "ApacheError (+4h)", Who = ClientIP, Detail = replace_regex(Message, @"[0-9]+", "N")),
+(HartwellApache_CL
+ | where OriginalTime between (datetime(2026-10-23T04:00:00Z) .. datetime(2026-10-23T16:00:00Z))
+ | where SourceIP == "192.168.1.100" and Method == "POST"
+ | where URI !has "wp-login" and URI !has "wp-admin"
+ | project T = OriginalTime, Source = "Apache", Who = SourceIP, Detail = strcat("POST ", tostring(split(URI, "?")[0]), " ", StatusCode))
+| summarize Rows = count(), FirstSeen = min(T), LastSeen = max(T) by Source, Who, Detail
+| sort by FirstSeen asc

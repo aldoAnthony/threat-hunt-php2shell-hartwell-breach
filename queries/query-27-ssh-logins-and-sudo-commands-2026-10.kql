@@ -1,0 +1,15 @@
+// Query 27: SSH logins and sudo commands, 2026-10-22 to 2026-10-23
+// Workspace: LAW-HuntPractice (Microsoft Sentinel)
+// Screenshot: ../images/query-27-ssh-logins-and-sudo-commands-2026-10.png
+
+HartwellAuth_CL
+| where OriginalTime between (datetime(2026-10-22T00:00:00Z) .. datetime(2026-10-24T00:00:00Z))
+| where Message has "Accepted" or Message has "COMMAND="
+| extend Kind = iff(Message has "Accepted", "ssh accepted", "sudo")
+| extend SrcIP = extract(@"from (\d+\.\d+\.\d+\.\d+)", 1, Message)
+| extend Account = coalesce(extract(@"for (\S+) from", 1, Message), extract(@"^\s*(\S+) :", 1, Message))
+| extend SshKey = extract(@"(SHA256:\S+)", 1, Message)
+| extend Cmd = extract(@"COMMAND=(.*)$", 1, Message)
+| summarize Events = count(), FirstSeen = min(OriginalTime), LastSeen = max(OriginalTime), Commands = make_set(Cmd, 15)
+    by Day = bin(OriginalTime, 1d), Kind, Account, SrcIP, SshKey
+| sort by FirstSeen asc
